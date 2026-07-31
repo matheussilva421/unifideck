@@ -89,8 +89,24 @@ def preserve_user_params(
     )
 
 
+COMMAND_PLACEHOLDER = "%command%"
+
+
+def canonical_launch_options(store: str, game_id: str) -> str:
+    """Return the Canonical Form: ``%command% <store>:<game_id>``.
+
+    Used at the two write points that create or force-sync a
+    Managed Shortcut.  ``_reclaim_orphan`` must NOT use this —
+    it passes the pure token to ``preserve_user_params`` so the
+    placeholder is not injected mid-string.
+    """
+    return f"{COMMAND_PLACEHOLDER} {store}:{game_id}"
+
+
 __all__ = [
+    "COMMAND_PLACEHOLDER",
     "STORE_ID_PATTERN",
+    "canonical_launch_options",
     "extract_store_id",
     "get_full_id",
     "get_store_prefix",

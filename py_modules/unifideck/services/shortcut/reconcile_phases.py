@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .games_map import UNIFIDECK_TAG, GameMapEntry, generate_app_id
-from .launch_options import is_unifideck_shortcut
+from .launch_options import canonical_launch_options, is_unifideck_shortcut
 from .orphan_scan import _is_launcher_exe
 from .reconcile_helpers import (
     build_launch_index,
@@ -438,7 +438,7 @@ class _ReconcilePhasesMixin:
         exe_quoted = f'"{launcher}"' if launcher else '""'
         entry["AppName"] = game.title
         entry["Exe"] = exe_quoted
-        entry["LaunchOptions"] = f"{game.store}:{game.store_game_id}"
+        entry["LaunchOptions"] = canonical_launch_options(game.store, game.store_game_id)
         if game.icon_url:
             entry["icon"] = game.icon_url
         tags_dict = entry.get("tags", {})
@@ -504,7 +504,7 @@ class _ReconcilePhasesMixin:
         launcher = getattr(self, "_launcher_path", "") or ""
         exe_quoted = f'"{launcher}"' if launcher else '""'
         start_dir = f'"{game.install_path}"' if game.install_path else '""'
-        launch_options = f"{game.store}:{game.store_game_id}"
+        launch_options = canonical_launch_options(game.store, game.store_game_id)
         cover_icon = game.icon_url or ""
         return {
             "appid": app_id,
