@@ -37,6 +37,18 @@ def _parse_argv(argv: list[str]) -> tuple[str, str]:
     return game_key, raw_options
 
 
+_ENV_DENYLIST = frozenset({
+    "PROTONPATH",
+    "WINEPREFIX",
+    "STEAM_COMPAT_DATA_PATH",
+    "STEAM_COMPAT_INSTALL_PATH",
+    "GAMEID",
+    "STORE",
+    "PROTON_VERB",
+    "DXVK_NVAPI_ALLOW_OTHER_DRIVERS",
+})
+
+
 def _promote_env_tokens(raw_options: str) -> None:
     """Promote ``KEY=value`` tokens from launch options to ``os.environ``.
 
@@ -49,17 +61,15 @@ def _promote_env_tokens(raw_options: str) -> None:
     these flags from ``os.environ``, so we promote any
     bare ``KEY=value`` token in the joined raw options string
     into the process environment before that code runs.
-    Only tokens starting with ``UNIFIDECK_`` are promoted —
-    don't pollute the env with arbitrary user-supplied args.
+    Launcher-managed variables (``_ENV_DENYLIST``) are never
+    promoted — the launcher sets those itself.
     """
     for token in raw_options.split():
         if "=" not in token:
             continue
         key, _, value = token.partition("=")
-        if not key.startswith("UNIFIDECK_"):
+        if key in _ENV_DENYLIST:
             continue
-        # Don't clobber an existing real env var — caller wins
-        # in case Steam ever evolves to pass env vars properly.
         os.environ.setdefault(key, value)
 def _resolve_plugin_dir() -> Path:
     """Resolve plugin dir."""
