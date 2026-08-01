@@ -268,30 +268,20 @@ class SyncRPCMixin(CleanupRPCMixin):
         Launch Options have Broken Ordering and rewrites them to the
         Canonical Form.  Returns ``{"fixed": N}``.
         """
-        from unifideck.services.shortcut.launch_options import get_full_id, is_unifideck_shortcut
-        from unifideck.services.shortcut.protected import is_protected
-        from unifideck.services.shortcut.reordering import reorder
+        from unifideck.services.shortcut.reconcile_helpers import (
+            reorder_managed_shortcuts,
+        )
 
         shortcut_svc = getattr(self.services, "shortcut", None)
         if shortcut_svc is None:
             raise RuntimeError("shortcut service unavailable")
 
         await shortcut_svc._load_shortcuts()
-        shortcuts = shortcut_svc._shortcuts.get("shortcuts", {})
-        fixed = 0
-        for entry in shortcuts.values():
-            if not isinstance(entry, dict):
-                continue
-            launch = entry.get("LaunchOptions", "")
-            if not isinstance(launch, str) or not is_unifideck_shortcut(launch):
-                continue
-            if is_protected(get_full_id(launch)):
-                continue
-            result = reorder(launch)
-            if result is not None:
-                entry["LaunchOptions"] = result
-                fixed += 1
-
+        # Same helper the reconcile phase uses, so the two entry points
+        # cannot drift on which shortcuts are eligible or protected.
+        fixed = reorder_managed_shortcuts(
+            shortcut_svc._shortcuts.get("shortcuts", {}),
+        )
         if fixed:
             await shortcut_svc._save_all()
         return {"fixed": fixed}

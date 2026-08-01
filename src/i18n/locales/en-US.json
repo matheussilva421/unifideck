@@ -303,7 +303,7 @@
     "launchOptionsFixNoop": "Nothing to Fix",
     "launchOptionsFixNoopMessage": "All Launch Options are already in the correct order.",
     "launchOptionsFixSuccess": "Launch Options Fixed",
-    "launchOptionsFixSuccessMessage": "Reordered {{count}} shortcut(s).",
+    "launchOptionsFixSuccessMessage": "Reordered {{count}} shortcut(s). Restart Steam for the change to take effect.",
     "deleteFailed": "Delete Failed",
     "repairPrefixSuccess": "Prefix Repaired",
     "repairPrefixSuccessMessage": "Ubisoft Connect prefix has been rebuilt",

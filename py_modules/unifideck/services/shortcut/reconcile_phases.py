@@ -23,7 +23,7 @@ from .reconcile_helpers import (
     build_launch_index,
     dedup_shortcuts,
     log_restart_banner,
-    maybe_reorder_entry,
+    reorder_managed_shortcuts,
     touch_marker,
 )
 
@@ -165,7 +165,11 @@ class _ReconcilePhasesMixin:
         counts: dict[str, int] = self._apply_reconcile_phases(
             games, registry, force=force, valid_stores=valid_stores,
         )
-        if counts["added"] or counts["removed"] or counts["reclaimed"]:
+        # ``reordered`` belongs here: a repaired shortcut is *kept*, so
+        # omitting it meant a steady-state sync dropped the repair.
+        if any(
+            counts[k] for k in ("added", "removed", "reclaimed", "reordered")
+        ):
             await self._save_all()
         if counts["added"] or counts["reclaimed"]:
             save_registry(registry)
@@ -199,9 +203,11 @@ class _ReconcilePhasesMixin:
         # entries with the same launch-options (in-memory desync,
         # crash recovery).
         removed += dedup_shortcuts(shortcuts_dict)
+        reordered = reorder_managed_shortcuts(shortcuts_dict)
         return {
             "added": added, "removed": removed,
             "kept": kept, "reclaimed": reclaimed,
+            "reordered": reordered,
         }
 
     @staticmethod
@@ -218,13 +224,17 @@ class _ReconcilePhasesMixin:
         """Log the reconcile tally + a Steam-restart banner when changed."""
         logger.info(
             "[ShortcutService] reconcile: %d games → "
-            "added=%d kept=%d removed=%d reclaimed=%d",
+            "added=%d kept=%d removed=%d reclaimed=%d reordered=%d",
             len(games), counts["added"], counts["kept"],
-            counts["removed"], counts["reclaimed"],
+            counts["removed"], counts["reclaimed"], counts["reordered"],
         )
-        if counts["added"] > 0 or counts["removed"] > 0:
+        # A reorder rewrites LaunchOptions in shortcuts.vdf, and Steam
+        # only picks that up on restart — so it needs the banner just
+        # as much as an add or a removal does.
+        if counts["added"] or counts["removed"] or counts["reordered"]:
             log_restart_banner(
-                counts["added"], counts["removed"], counts["reclaimed"],
+                counts["added"], counts["removed"],
+                counts["reclaimed"], counts["reordered"],
             )
 
     async def _reset_lastplaytime_once(self: Any) -> None:
@@ -363,8 +373,6 @@ class _ReconcilePhasesMixin:
                     shortcuts_dict[existing_key], game, app_id, launcher,
                 )
                 register(registry, key, app_id, game.title)
-            else:
-                maybe_reorder_entry(shortcuts_dict[existing_key])
             return "kept"
 
         # ── Match by AppID (fallback — LaunchOptions missing).
@@ -374,8 +382,6 @@ class _ReconcilePhasesMixin:
                 self._update_existing_shortcut(
                     shortcuts_dict[existing_key], game, app_id, launcher,
                 )
-            else:
-                maybe_reorder_entry(shortcuts_dict[existing_key])
             register(registry, key, app_id, game.title)
             return "kept"
 

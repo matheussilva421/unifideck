@@ -40,12 +40,15 @@ def dedup_shortcuts(shortcuts_dict: dict[str, Any]) -> int:
     return len(losers)
 
 
-def log_restart_banner(added: int, removed: int, reclaimed: int) -> None:
+def log_restart_banner(
+    added: int, removed: int, reclaimed: int, reordered: int = 0,
+) -> None:
     """Log the "restart Steam to see changes" banner for tailed logs."""
     for line in (
         "=" * 60,
         "IMPORTANT: Steam restart required to see shortcut changes!",
-        f"  (added={added} removed={removed} reclaimed={reclaimed})",
+        (f"  (added={added} removed={removed} "
+         f"reclaimed={reclaimed} reordered={reordered})"),
         ("Please EXIT Steam completely and restart for the "
          "shortcuts.vdf changes to take effect."),
         "=" * 60,
@@ -75,8 +78,8 @@ def build_launch_index(shortcuts_dict: dict[str, Any]) -> dict[str, str]:
     return launch_to_key
 
 
-def maybe_reorder_entry(entry: dict[str, Any]) -> None:
-    """Rewrite ``entry``'s ``LaunchOptions`` to the Canonical Form, in place.
+def maybe_reorder_entry(entry: dict[str, Any]) -> bool:
+    """Rewrite ``entry``'s ``LaunchOptions`` in place; True if it changed.
 
     No-op when the string is already healthy, when it isn't a string,
     or when the shortcut is protected. Auth-forwarder shortcuts are
@@ -90,9 +93,34 @@ def maybe_reorder_entry(entry: dict[str, Any]) -> None:
 
     launch = entry.get("LaunchOptions", "")
     if not isinstance(launch, str) or not launch:
-        return
+        return False
     if is_protected(get_full_id(launch)):
-        return
+        return False
     fixed = reorder(launch)
-    if fixed is not None:
-        entry["LaunchOptions"] = fixed
+    if fixed is None:
+        return False
+    entry["LaunchOptions"] = fixed
+    return True
+
+
+def reorder_managed_shortcuts(shortcuts_dict: dict[str, Any]) -> int:
+    """Repair Broken Ordering across every managed shortcut; return the count.
+
+    A reconcile phase of its own rather than a step inside the
+    per-game loop, for two reasons:
+
+    * ``reconcile`` only writes ``shortcuts.vdf`` when something was
+      added, removed or reclaimed. A shortcut a third-party editor
+      mangled is none of those — it is *kept* — so a repair applied
+      inside the per-game loop was computed and then discarded on a
+      steady-state sync, which is exactly when it is needed.
+    * the per-game loop only visits shortcuts matching a game in the
+      current library, leaving the rest unrepaired.
+
+    The caller must fold the return value into its save decision.
+    """
+    return sum(
+        maybe_reorder_entry(entry)
+        for entry in shortcuts_dict.values()
+        if isinstance(entry, dict)
+    )
