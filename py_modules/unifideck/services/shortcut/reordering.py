@@ -52,8 +52,14 @@ def reorder(launch_options: str) -> str | None:
     if not tokens:
         return None
 
+    # Skip ``KEY=VALUE`` tokens: an env VALUE can itself contain a
+    # store-shaped substring (``FOO=gog:123``). Treating it as the
+    # Store Token would move the env var into token position, where
+    # it lands after the placeholder and Steam never exports it.
     store_idx: int | None = None
     for i, tok in enumerate(tokens):
+        if _ENV_RE.match(tok):
+            continue
         if STORE_ID_PATTERN.search(tok):
             store_idx = i
             break
@@ -85,18 +91,31 @@ def _rebuild(
     store_idx: int,
     cmd_indices: list[int],
 ) -> str:
+    """Rebuild as ``<env> <wrappers> %command% <store token> <args>``.
+
+    Non-env tokens are split on the placeholder (or, when there is
+    none, on the Store Token): what came *before* is a wrapper and
+    must stay before the placeholder, what came *after* is a game
+    argument.  CheatDeck writes ``~/lsfg`` and ``~/fgmod/fgmod`` as
+    prefix commands, so emitting them after the token would turn a
+    wrapper into an argument to the launcher and silently disable it.
+    """
     env: list[str] = []
-    rest: list[str] = []
+    wrappers: list[str] = []
+    args: list[str] = []
     store_token = tokens[store_idx]
     skip = {store_idx, *cmd_indices}
+    boundary = cmd_indices[0] if cmd_indices else store_idx
 
     for i, tok in enumerate(tokens):
         if i in skip:
             continue
         if _ENV_RE.match(tok):
             env.append(tok)
+        elif i < boundary:
+            wrappers.append(tok)
         else:
-            rest.append(tok)
+            args.append(tok)
 
-    parts = [*env, COMMAND_PLACEHOLDER, store_token, *rest]
+    parts = [*env, *wrappers, COMMAND_PLACEHOLDER, store_token, *args]
     return " ".join(parts)

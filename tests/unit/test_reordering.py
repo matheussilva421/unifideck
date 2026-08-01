@@ -99,6 +99,72 @@ class TestIdempotency:
         assert reorder(first) is None
 
 
+class TestWrappers:
+    """Wrappers must stay BEFORE the placeholder.
+
+    CheatDeck writes ``~/lsfg`` and ``~/fgmod/fgmod`` as prefix
+    commands (see its Advanced view). Emitting them after the Store
+    Token turns a wrapper into an argument to the launcher, which
+    silently disables it.
+    """
+
+    @pytest.mark.parametrize(
+        ("input_", "expected"),
+        [
+            ("~/lsfg epic:123 %command%", "~/lsfg %command% epic:123"),
+            ("gamemoderun epic:123 %command%", "gamemoderun %command% epic:123"),
+            ("mangohud epic:123", "mangohud %command% epic:123"),
+            (
+                "ENV=1 gamemoderun epic:123 %command%",
+                "ENV=1 gamemoderun %command% epic:123",
+            ),
+        ],
+    )
+    def test_wrapper_stays_before_placeholder(self, input_: str, expected: str):
+        assert reorder(input_) == expected
+
+    def test_wrapper_already_healthy_is_untouched(self):
+        assert reorder("~/lsfg %command% epic:123") is None
+
+    def test_args_after_placeholder_stay_after(self):
+        assert reorder("ENV=1 epic:123 %command% -windowed") == (
+            "ENV=1 %command% epic:123 -windowed"
+        )
+
+
+class TestStoreTokenDetection:
+    def test_env_value_containing_store_pattern_is_not_the_token(self):
+        """An env VALUE that looks like a Store Token must not be mistaken for one.
+
+        Otherwise the env var is moved into token position and ends up
+        after the placeholder, where Steam never exports it.
+        """
+        assert reorder("FOO=gog:123 epic:456") == "FOO=gog:123 %command% epic:456"
+
+
+class TestProtectedShortcuts:
+    """Auth shortcuts are out of scope for reordering (see ADR-0002).
+
+    The manual RPC already guards on ``is_protected``; the automatic
+    sync path must guard identically.
+    """
+
+    def test_maybe_reorder_skips_protected(self):
+        from unifideck.services.shortcut.reconcile_phases import _ReconcilePhasesMixin
+
+        original = "ubisoft:upc-auth UNIFIDECK_UBISOFT_ACTION=auth"
+        entry = {"LaunchOptions": original}
+        _ReconcilePhasesMixin._maybe_reorder(entry)
+        assert entry["LaunchOptions"] == original
+
+    def test_maybe_reorder_fixes_normal_shortcut(self):
+        from unifideck.services.shortcut.reconcile_phases import _ReconcilePhasesMixin
+
+        entry = {"LaunchOptions": "ENV=1 epic:123 %command%"}
+        _ReconcilePhasesMixin._maybe_reorder(entry)
+        assert entry["LaunchOptions"] == "ENV=1 %command% epic:123"
+
+
 class TestEdgeCases:
     def test_empty_string(self):
         assert reorder("") is None

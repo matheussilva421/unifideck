@@ -17,15 +17,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .games_map import UNIFIDECK_TAG, GameMapEntry, generate_app_id
-from .launch_options import canonical_launch_options, is_unifideck_shortcut
+from .launch_options import (
+    canonical_launch_options,
+    get_full_id,
+    is_unifideck_shortcut,
+)
 from .orphan_scan import _is_launcher_exe
-from .reordering import reorder
+from .protected import is_protected
 from .reconcile_helpers import (
     build_launch_index,
     dedup_shortcuts,
     log_restart_banner,
     touch_marker,
 )
+from .reordering import reorder
 
 if TYPE_CHECKING:
     from unifideck.core.types import Game
@@ -454,9 +459,17 @@ class _ReconcilePhasesMixin:
 
     @staticmethod
     def _maybe_reorder(entry: dict[str, Any]) -> None:
-        """Apply reorder() to a managed shortcut's LaunchOptions in place."""
+        """Apply reorder() to a managed shortcut's LaunchOptions in place.
+
+        Auth-forwarder shortcuts are owned by the auth flow, not the
+        library flow, and are out of scope for reordering (ADR-0002).
+        The manual ``fix_launch_options_ordering`` RPC guards on
+        ``is_protected``; this automatic path must guard identically.
+        """
         launch = entry.get("LaunchOptions", "")
         if not isinstance(launch, str) or not launch:
+            return
+        if is_protected(get_full_id(launch)):
             return
         fixed = reorder(launch)
         if fixed is not None:

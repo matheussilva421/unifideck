@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from unifideck.services.shortcut.launch_options import (
     canonical_launch_options,
     get_full_id,
