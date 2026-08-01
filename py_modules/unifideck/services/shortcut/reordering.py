@@ -19,25 +19,36 @@ _ENV_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 
 def _tokenize(raw: str) -> list[str]:
-    """Split on whitespace outside quotes, preserving original text."""
+    """Split on whitespace outside quotes, preserving original text.
+
+    Unlike ``shlex.split`` this keeps the quote characters, because the
+    result is re-joined into a Launch Options string the user still has
+    to read and Steam still has to parse — dequoting here would silently
+    rewrite the user's value.
+
+    ``quote_char`` doubles as the "inside quotes" flag, and each branch
+    exits early: an ``if/elif`` chain nests in the AST, and four branches
+    of it trip the nesting-depth gate.
+    """
     tokens: list[str] = []
     current = ""
-    in_quotes = False
     quote_char = ""
     for char in raw:
-        if char in ('"', "'") and not in_quotes:
-            in_quotes = True
+        if quote_char:
+            current += char
+            if char == quote_char:
+                quote_char = ""
+            continue
+        if char in ('"', "'"):
             quote_char = char
             current += char
-        elif char == quote_char and in_quotes:
-            in_quotes = False
-            current += char
-        elif char.isspace() and not in_quotes:
+            continue
+        if char.isspace():
             if current:
                 tokens.append(current)
                 current = ""
-        else:
-            current += char
+            continue
+        current += char
     if current:
         tokens.append(current)
     return tokens
