@@ -43,6 +43,33 @@ def _tokenize(raw: str) -> list[str]:
     return tokens
 
 
+def _find_store_idx(tokens: list[str]) -> int | None:
+    """Index of the Store Token, or ``None`` when there isn't one.
+
+    ``KEY=VALUE`` tokens are skipped: an env VALUE can itself contain
+    a store-shaped substring (``FOO=gog:123``). Treating that as the
+    Store Token would move the env var into token position, where it
+    lands after the placeholder and Steam never exports it.
+    """
+    for i, tok in enumerate(tokens):
+        if _ENV_RE.match(tok):
+            continue
+        if STORE_ID_PATTERN.search(tok):
+            return i
+    return None
+
+
+def _has_env_after(tokens: list[str], cmd_idx: int) -> bool:
+    """True if any ``KEY=VALUE`` token sits after the placeholder.
+
+    Steam only exports assignments that precede ``%command%``, so one
+    landing after it is silently dropped — Broken Ordering.
+    """
+    return any(
+        _ENV_RE.match(tok) for tok in tokens[cmd_idx + 1:]
+    )
+
+
 def reorder(launch_options: str) -> str | None:
     """Return the reordered string, or ``None`` if already healthy."""
     if not launch_options or not launch_options.strip():
@@ -52,35 +79,20 @@ def reorder(launch_options: str) -> str | None:
     if not tokens:
         return None
 
-    # Skip ``KEY=VALUE`` tokens: an env VALUE can itself contain a
-    # store-shaped substring (``FOO=gog:123``). Treating it as the
-    # Store Token would move the env var into token position, where
-    # it lands after the placeholder and Steam never exports it.
-    store_idx: int | None = None
-    for i, tok in enumerate(tokens):
-        if _ENV_RE.match(tok):
-            continue
-        if STORE_ID_PATTERN.search(tok):
-            store_idx = i
-            break
-
+    store_idx = _find_store_idx(tokens)
     if store_idx is None:
         return None
 
     cmd_indices = [i for i, t in enumerate(tokens) if t == COMMAND_PLACEHOLDER]
 
-    if not cmd_indices:
-        return _rebuild(tokens, store_idx, [])
-    if len(cmd_indices) > 1:
+    # (c) more than one placeholder, or none at all.
+    if len(cmd_indices) != 1:
         return _rebuild(tokens, store_idx, cmd_indices)
 
     cmd_idx = cmd_indices[0]
 
-    for i, tok in enumerate(tokens):
-        if i > cmd_idx and _ENV_RE.match(tok):
-            return _rebuild(tokens, store_idx, cmd_indices)
-
-    if store_idx < cmd_idx:
+    # (a) env after the placeholder, or (b) token before it.
+    if _has_env_after(tokens, cmd_idx) or store_idx < cmd_idx:
         return _rebuild(tokens, store_idx, cmd_indices)
 
     return None
