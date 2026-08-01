@@ -16,6 +16,7 @@ export { LanguageSelector } from "./LanguageSelector";
 export { GameDetailsViewModeToggle } from "./GameDetailsViewModeToggle";
 export { CollectionsToggle } from "./CollectionsToggle";
 export { CleanupSection } from "./CleanupSection";
+export { LaunchOptionsFixSection } from "./LaunchOptionsFixSection";
 export { CaptureLogsSection } from "./CaptureLogsSection";
 export { StoreAuthButton } from "./StoreAuthButton";
 export { PluginUpdater } from "./PluginUpdater";

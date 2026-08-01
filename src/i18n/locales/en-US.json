@@ -181,6 +181,11 @@
     "cancel": "Cancel",
     "deleting": "Deleting..."
   },
+  "launchOptionsFix": {
+    "title": "Launch Options",
+    "fixAll": "Fix Launch Options ordering",
+    "fixing": "Fixing..."
+  },
   "captureLogs": {
     "_comment": "CaptureLogsSection (QAM Settings tab, rendered directly below CleanupSection) + CaptureLogsConfirmModal. One button calls the capture_logs RPC, which zips every log, state file and diagnostic report into the user's Downloads folder so it can be attached to a bug report. The returned path is kept on screen after the toast expires, rendered dir=ltr with word-break so a long POSIX path stays readable in a ~300px row. partialNote is genuinely pluralised via {{count}}, so both forms must exist; bundleInfo uses {{files}} instead to stay out of i18next's plural machinery.",
     "title": "Capture Logs",
@@ -294,6 +299,11 @@
     "cleanupSuccessfulMessage": "Removed {{games}} shortcuts, {{artwork}} artwork files, signed out of {{stores}} stores, deleted {{files}} install dirs, wiped {{residual}} data files. Cache cleared.",
     "cleanupNoop": "Nothing to Clean",
     "cleanupNoopMessage": "Unifideck has no shortcuts, artwork, or saved logins to remove.",
+    "launchOptionsFixFailed": "Fix Failed",
+    "launchOptionsFixNoop": "Nothing to Fix",
+    "launchOptionsFixNoopMessage": "All Launch Options are already in the correct order.",
+    "launchOptionsFixSuccess": "Launch Options Fixed",
+    "launchOptionsFixSuccessMessage": "Reordered {{count}} shortcut(s).",
     "deleteFailed": "Delete Failed",
     "repairPrefixSuccess": "Prefix Repaired",
     "repairPrefixSuccessMessage": "Ubisoft Connect prefix has been rebuilt",

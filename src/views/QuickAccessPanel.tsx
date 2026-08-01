@@ -30,6 +30,7 @@ import {
   GameDetailsViewModeToggle,
   CollectionsToggle,
   CleanupSection,
+  LaunchOptionsFixSection,
   CaptureLogsSection,
   PluginUpdater,
 } from "../components/settings";
@@ -112,6 +113,7 @@ export const QuickAccessPanel: FC = () => {
             <CollectionsToggle />
             <PluginUpdater />
             <CleanupSection />
+            <LaunchOptionsFixSection />
             <CaptureLogsSection />
           </>
         )}

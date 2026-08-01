@@ -63,6 +63,7 @@ export const rpcRoutes = {
   injectGameToAppinfo: "inject_game_to_appinfo",
   // Library cleanup (SyncRPCMixin)
   performFullCleanup: "perform_full_cleanup",
+  fixLaunchOptionsOrdering: "fix_launch_options_ordering",
   // UI helpers (UIRPCMixin)
   injectHideCss: "inject_hide_css",
   setLanguagePreference: "set_language_preference",
