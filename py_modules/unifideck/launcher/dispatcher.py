@@ -46,6 +46,7 @@ _ENV_DENYLIST = frozenset({
     "STORE",
     "PROTON_VERB",
     "DXVK_NVAPI_ALLOW_OTHER_DRIVERS",
+    "ACTIVE_WINEPREFIX",
 })
 
 

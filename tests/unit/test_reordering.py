@@ -116,3 +116,6 @@ class TestEdgeCases:
 
     def test_env_after_placeholder_moved_before(self):
         assert reorder("%command% MANGOHUD=1 epic:123") == "MANGOHUD=1 %command% epic:123"
+
+    def test_tab_separator(self):
+        assert reorder("MANGOHUD=1\tepic:123") == "MANGOHUD=1 %command% epic:123"

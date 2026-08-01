@@ -268,7 +268,8 @@ class SyncRPCMixin(CleanupRPCMixin):
         Launch Options have Broken Ordering and rewrites them to the
         Canonical Form.  Returns ``{"fixed": N}``.
         """
-        from unifideck.services.shortcut.launch_options import is_unifideck_shortcut
+        from unifideck.services.shortcut.launch_options import get_full_id, is_unifideck_shortcut
+        from unifideck.services.shortcut.protected import is_protected
         from unifideck.services.shortcut.reordering import reorder
 
         shortcut_svc = getattr(self.services, "shortcut", None)
@@ -283,6 +284,8 @@ class SyncRPCMixin(CleanupRPCMixin):
                 continue
             launch = entry.get("LaunchOptions", "")
             if not isinstance(launch, str) or not is_unifideck_shortcut(launch):
+                continue
+            if is_protected(get_full_id(launch)):
                 continue
             result = reorder(launch)
             if result is not None:

@@ -32,7 +32,7 @@ def _tokenize(raw: str) -> list[str]:
         elif char == quote_char and in_quotes:
             in_quotes = False
             current += char
-        elif char == " " and not in_quotes:
+        elif char.isspace() and not in_quotes:
             if current:
                 tokens.append(current)
                 current = ""
