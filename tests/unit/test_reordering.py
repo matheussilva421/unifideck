@@ -150,18 +150,18 @@ class TestProtectedShortcuts:
     """
 
     def test_maybe_reorder_skips_protected(self):
-        from unifideck.services.shortcut.reconcile_phases import _ReconcilePhasesMixin
+        from unifideck.services.shortcut.reconcile_helpers import maybe_reorder_entry
 
         original = "ubisoft:upc-auth UNIFIDECK_UBISOFT_ACTION=auth"
         entry = {"LaunchOptions": original}
-        _ReconcilePhasesMixin._maybe_reorder(entry)
+        maybe_reorder_entry(entry)
         assert entry["LaunchOptions"] == original
 
     def test_maybe_reorder_fixes_normal_shortcut(self):
-        from unifideck.services.shortcut.reconcile_phases import _ReconcilePhasesMixin
+        from unifideck.services.shortcut.reconcile_helpers import maybe_reorder_entry
 
         entry = {"LaunchOptions": "ENV=1 epic:123 %command%"}
-        _ReconcilePhasesMixin._maybe_reorder(entry)
+        maybe_reorder_entry(entry)
         assert entry["LaunchOptions"] == "ENV=1 %command% epic:123"
 
 

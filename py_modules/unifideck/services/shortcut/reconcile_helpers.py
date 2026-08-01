@@ -73,3 +73,26 @@ def build_launch_index(shortcuts_dict: dict[str, Any]) -> dict[str, str]:
         if full_id:
             launch_to_key[full_id] = vdf_key
     return launch_to_key
+
+
+def maybe_reorder_entry(entry: dict[str, Any]) -> None:
+    """Rewrite ``entry``'s ``LaunchOptions`` to the Canonical Form, in place.
+
+    No-op when the string is already healthy, when it isn't a string,
+    or when the shortcut is protected. Auth-forwarder shortcuts are
+    owned by the auth flow, not the library flow, and are out of scope
+    for reordering — the manual ``fix_launch_options_ordering`` RPC
+    guards on ``is_protected``, and this automatic reconcile path
+    guards identically.
+    """
+    from .protected import is_protected
+    from .reordering import reorder
+
+    launch = entry.get("LaunchOptions", "")
+    if not isinstance(launch, str) or not launch:
+        return
+    if is_protected(get_full_id(launch)):
+        return
+    fixed = reorder(launch)
+    if fixed is not None:
+        entry["LaunchOptions"] = fixed

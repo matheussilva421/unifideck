@@ -17,20 +17,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .games_map import UNIFIDECK_TAG, GameMapEntry, generate_app_id
-from .launch_options import (
-    canonical_launch_options,
-    get_full_id,
-    is_unifideck_shortcut,
-)
+from .launch_options import canonical_launch_options, is_unifideck_shortcut
 from .orphan_scan import _is_launcher_exe
-from .protected import is_protected
 from .reconcile_helpers import (
     build_launch_index,
     dedup_shortcuts,
     log_restart_banner,
+    maybe_reorder_entry,
     touch_marker,
 )
-from .reordering import reorder
 
 if TYPE_CHECKING:
     from unifideck.core.types import Game
@@ -369,7 +364,7 @@ class _ReconcilePhasesMixin:
                 )
                 register(registry, key, app_id, game.title)
             else:
-                self._maybe_reorder(shortcuts_dict[existing_key])
+                maybe_reorder_entry(shortcuts_dict[existing_key])
             return "kept"
 
         # ── Match by AppID (fallback — LaunchOptions missing).
@@ -380,7 +375,7 @@ class _ReconcilePhasesMixin:
                     shortcuts_dict[existing_key], game, app_id, launcher,
                 )
             else:
-                self._maybe_reorder(shortcuts_dict[existing_key])
+                maybe_reorder_entry(shortcuts_dict[existing_key])
             register(registry, key, app_id, game.title)
             return "kept"
 
@@ -456,24 +451,6 @@ class _ReconcilePhasesMixin:
             tags_dict["0"] = UNIFIDECK_TAG
             tags_dict["1"] = game.store
             tags_dict["2"] = "" if game.installed else "Not Installed"
-
-    @staticmethod
-    def _maybe_reorder(entry: dict[str, Any]) -> None:
-        """Apply reorder() to a managed shortcut's LaunchOptions in place.
-
-        Auth-forwarder shortcuts are owned by the auth flow, not the
-        library flow, and are out of scope for reordering (ADR-0002).
-        The manual ``fix_launch_options_ordering`` RPC guards on
-        ``is_protected``; this automatic path must guard identically.
-        """
-        launch = entry.get("LaunchOptions", "")
-        if not isinstance(launch, str) or not launch:
-            return
-        if is_protected(get_full_id(launch)):
-            return
-        fixed = reorder(launch)
-        if fixed is not None:
-            entry["LaunchOptions"] = fixed
 
     def _reclaim_orphan(
         self: Any, entry: dict[str, Any], game: Game, app_id: int,
